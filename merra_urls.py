@@ -1,6 +1,6 @@
 import asyncio
 import aiohttp
-from datetime import datetime
+import datetime
 
 BASE_URL = "https://goldsmr4.gesdisc.eosdis.nasa.gov/opendap/MERRA2/"
 
@@ -13,9 +13,24 @@ def url_generator(
 ):
     # URLs have form root + short_name + const + date + stream + collection + date + const + field_params
     # collections: list of dicts {'collection': 'tavg1_2d_slv_Nx', 'short_name': 'M2T1NXSLV', 'fields': ['U50M', 'V50M']}
-    raise NotImplementedError
+    hour_str = '[0:23]'
     lat_str = f'[{lat_to_index_num(lat_interval[0])}:{lat_to_index_num(lat_interval[1])}]'
     lon_str = f'[{lon_to_index_num(lon_interval[0])}:{lon_to_index_num(lon_interval[1])}]'
+    for collection in collections:
+        date = time_interval[0]
+        date_inc = datetime.timedelta(days=1)
+        param_str = f'{hour_str}{lat_str}{lon_str},'
+        query_str = param_str.join(collection['fields']) + f'{param_str}time,lat{lat_str},lon{lon_str}'
+
+        while date < time_interval[1]:
+            short_name = collection['short_name']
+            year_month = date.strftime('%Y/%m')
+            stream_num = production_stream(date.year)
+            collec_name = collection['collection']
+            date_str = date.strftime('%Y%m%d')
+            url = f'{BASE_URL}{short_name}.5.12.4/{year_month}/MERRA2_{stream_num}.{collec_name}.{date_str}.nc4.nc4?{query_str}'
+            date += date_inc
+            yield url
 
 
 
@@ -37,7 +52,7 @@ def lon_to_index_num(lon):
 
 def production_stream(year):
     """MERRA-2 is/was produced in 4 batches ('streams'), depending on timeframe"""
-    if year < 1980 or year > datetime.now().year:
+    if year < 1980 or year > datetime.datetime.now().year:
         raise ValueError(
             f"Year {year} out of range. must be in [1980, {datetime.now().year}]"
         )
