@@ -38,3 +38,4 @@ def test_url_generator():
         out[0]
         == "https://goldsmr4.gesdisc.eosdis.nasa.gov/opendap/MERRA2/M2I1NXLFO.5.12.4/2020/03/MERRA2_400.inst1_2d_lfo_Nx.20200331.nc4.nc4?PS[0:23][176:184][285:291],SPEEDLML[0:23][176:184][285:291],time,lat[176:184],lon[285:291]"
     )
+
