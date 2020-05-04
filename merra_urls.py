@@ -1,5 +1,3 @@
-import asyncio
-import aiohttp
 import datetime
 
 BASE_URL = "https://goldsmr4.gesdisc.eosdis.nasa.gov/opendap/MERRA2/"
@@ -29,8 +27,9 @@ def url_generator(
             collec_name = collection['collection']
             date_str = date.strftime('%Y%m%d')
             url = f'{BASE_URL}{short_name}.5.12.4/{year_month}/MERRA2_{stream_num}.{collec_name}.{date_str}.nc4.nc4?{query_str}'
-            date += date_inc
             yield url
+            date += date_inc
+    print('exhausted URL generator')
 
 
 
