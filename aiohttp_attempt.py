@@ -80,7 +80,8 @@ async def authentication(session, url):
 
 async def main():
     async with aiohttp.ClientSession(cookie_jar=cookie_jar) as client:
-        return await authentication(client, URL(TEST_URL))
+        repeat_url = await authentication(client, URL(TEST_URL))
+        await download(client, repeat_url, Path('./'))
 
 async def on_request_end(session, trace_config_ctx, params):
     print("\nEnding %s request for %s. I sent: %s" % (params.method, params.url, params.headers))
@@ -93,7 +94,4 @@ async def dl(url):
     async with aiohttp.ClientSession(cookie_jar=cookie_jar) as client:
         await download(client, first_url, Path(r'./'))
 
-first_url = asyncio.run(main())
-print(cookie_jar._cookies)
-asyncio.run(dl(TEST_URL))
-print(cookie_jar._cookies)
+asyncio.run(main())
