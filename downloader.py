@@ -11,12 +11,15 @@ def filename_from_url(url):
     return url.split("/")[-1].split(".nc4?")[0]
 
 
+
+
+
 async def download_async(
     session, directory: Path, url, write_async=False, chunk_size=4 * 1024
 ):
     fname = directory / filename_from_url(url)
     async with session.get(url) as resp:
-        assert resp.status == 200
+        #assert resp.status == 200
         if write_async:  # try async write with aiofiles
             async with aiofiles.open(fname, "wb") as fd:
                 while True:
@@ -39,14 +42,15 @@ async def download_with_limit(sem, session, directory, url, **kwargs):
 
 
 async def login(session):
-    data = {'username': os.getenv("MERRA2_USER"), 'password': os.getenv("MERRA2_PASS")}
-    async with session:
-        return await session.post("https://urs.earthdata.nasa.gov/login", data=aiohttp.FormData(data))
+    data = aiohttp.FormData({'username': os.getenv("MERRA2_USER"), 'password': os.getenv("MERRA2_PASS")})
+    await session.post("https://urs.earthdata.nasa.gov/login", data=data)
 
 
-async def main(urls, directory: Path, max_connects=8, **kwargs):
-    auth=aiohttp.BasicAuth(os.getenv("MERRA2_USER"), os.getenv("MERRA2_PASS"))
+
+async def main(urls, directory: Path, session, max_connects=8, **kwargs):
+    #auth=aiohttp.BasicAuth(os.getenv("MERRA2_USER"), os.getenv("MERRA2_PASS"))
 
     sem = asyncio.Semaphore(max_connects)
-    async with aiohttp.ClientSession(auth=auth) as session:
+    # aiohttp.ClientSession(auth=auth)
+    async with session:
         return await asyncio.gather(*(download_with_limit(sem, session, directory, url, **kwargs) for url in urls))
