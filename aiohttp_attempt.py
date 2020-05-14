@@ -11,6 +11,11 @@ import os
 # The authentication() and login() functions seem to work, successfully storing 3 cookies.
 # But when I try to use them in the actual download() GET request, I get redirected back to oauth.
 # So I can't download anything.
+
+# The multi-threaded requests-based downloader, which works, seems to have the exact same cookies at that point.
+# It picks up a session cookie when the first download is successful.
+# This matches what I see in Chrome's network log when I download manually.
+
 # The download() GET request is identical to the authentication() GET request, except for the cookie.
 
 TEST_URL = "https://goldsmr4.gesdisc.eosdis.nasa.gov/opendap/MERRA2/M2T1NXSLV.5.12.4/2020/03/MERRA2_400.tavg1_2d_slv_Nx.20200331.nc4.nc4?PS[0:23][232:254][117:139],T10M[0:23][232:254][117:139],U50M[0:23][232:254][117:139],V50M[0:23][232:254][117:139],time,lat[232:254],lon[117:139]"
