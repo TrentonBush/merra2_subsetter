@@ -3,7 +3,7 @@ import merra_urls
 import threaded_downloader
 
 urls = merra_urls.url_generator(
-    time_interval=(datetime(2019, 3, 1), datetime(2020, 3, 1)),
+    time_interval=(datetime(2020, 3, 30), datetime(2020, 3, 31)),
     lat_interval=(26, 37),
     lon_interval=(-107, -93),
     collections=[
