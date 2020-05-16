@@ -97,7 +97,7 @@ class AsyncDownloader(object):
         return
 
 
-    async def download(self, urls: Iterable[str], max_connects: int=8, retry=True) -> None:
+    async def download(self, urls: Iterable[str], max_connects: int=8, timeout: float=30.0, retry=True) -> None:
         self.directory.mkdir(parents=True, exist_ok=True)
         sem = asyncio.Semaphore(max_connects)
 
@@ -106,7 +106,7 @@ class AsyncDownloader(object):
         url_iterator = iter(urls) # makes compatible with lists and generators
         first_url = next(url_iterator)
 
-        async with httpx.AsyncClient(auth=self._auth, timeout=20) as client:
+        async with httpx.AsyncClient(auth=self._auth, timeout=timeout) as client:
             tasks = (self._download_url_rate_limited(sem, client, url) for url in url_iterator)
             await self._download_url(client, first_url)
             await asyncio.gather(*tasks)
