@@ -33,8 +33,8 @@ async def download(session, url, directory: Path, write_async = True):
 
 async def main():
     auth = (os.getenv("MERRA2_USER"), os.getenv("MERRA2_PASS"))
-    async with httpx.AsyncClient(auth=auth, timeout=15) as client:
-        await download(client, TEST_URL, Path('./'))
+    async with httpx.AsyncClient(auth=auth, timeout=45) as client:
+        await download(client, TEST_URL, Path('./data/'))
         
 
 asyncio.run(main())
