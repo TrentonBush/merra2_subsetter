@@ -112,4 +112,4 @@ class AsyncDownloader(object):
             await asyncio.gather(*tasks)
 
             if retry and self.failed_downloads:
-                self._retry(client, sem)
+                await self._retry(client, sem)
