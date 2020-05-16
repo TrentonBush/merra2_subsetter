@@ -5,7 +5,7 @@ import async_downloader
 from pathlib import Path
 
 urls = merra_urls.url_generator(
-    time_interval=(datetime(2020, 3, 1), datetime(2020, 3, 31)),
+    time_interval=(datetime(2020, 3, 30), datetime(2020, 4, 2)),
     lat_interval=(26, 37),
     lon_interval=(-107, -93),
     collections=[
@@ -19,4 +19,4 @@ urls = merra_urls.url_generator(
 
 dl = async_downloader.AsyncDownloader(Path('./data/'))
 
-asyncio.run(dl.download(urls))
+asyncio.run(dl.download(urls, timeout=15))
