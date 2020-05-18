@@ -19,4 +19,4 @@ urls = merra_urls.url_generator(
 
 dl = async_downloader.AsyncDownloader(Path('./data/'))
 
-asyncio.run(dl.download(urls, timeout=15))
+asyncio.run(dl.download(urls))
