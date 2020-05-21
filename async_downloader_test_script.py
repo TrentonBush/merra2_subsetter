@@ -15,14 +15,9 @@ urls = merra_urls.url_generator(
             "fields": ["PS", "TS", "T10M", "U50M", "V50M"],
         },
         {
-            "collection": "inst1_2d_asm_Nx",
-            "short_name": "M2I1NXASM",
-            "fields": ["U50M", "V50M"],
-        },
-        {
             "collection": "tavg1_2d_flx_Nx",
             "short_name": "M2T1NXFLX",
-            "fields": ["PRECTOTCORR", "RHOA", "RISFC", "Z0M"],
+            "fields": ["PRECTOTCORR", "RHOA", "RISFC"],
         },
         {
             "collection": "tavg1_2d_lnd_Nx",
@@ -32,6 +27,6 @@ urls = merra_urls.url_generator(
     ],
 )
 
-dl = async_downloader.AsyncDownloader(Path("~/c/data/merra_texas"))
+dl = async_downloader.AsyncDownloader(Path("/mnt/c/data/merra_texas"))
 
 asyncio.run(dl.download(urls))
