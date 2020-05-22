@@ -57,8 +57,8 @@ def binary_round(
     return (ds * multiplier).round() * divisor
 
 
-def chunk_transformations(ds: xr.Dataset) -> xr.Dataset:
-    """Column transformations for MERRA-2 data. Note that modifications are performed IN PLACE, but I can't drop variables in place so have to return a new xr.Dataset without those variables.
+def transforms(ds: xr.Dataset) -> xr.Dataset:
+    """Column transforms for MERRA-2 data. Note that modifications are performed IN PLACE, but I can't drop variables in place so have to return a new xr.Dataset without those variables.
     * Change temperature units from K to degrees C
     * Convert wind vector components to magnitude and direction (degrees in [0,360] from North, positive going clockwise)
     * Log10 transform precipitation
@@ -167,6 +167,50 @@ def make_divisions(
         )
 
 
+def rechunk(ds: xr.Dataset, megabytes_per_chunk: Union[int, float] = 100) -> xr.Dataset:
+    """Change chunk size to something more appropriate. Daily netCDFs are read in as all-space, daily time. I want the opposite: all-time chunked space. Spatial tiling is determined by megabytes_per_chunk.
+    Note that megabytes_per_chunk is approximate and usually conservative - the number of chunks is conservative but the step size is aggressive, so the errors often but not always offset. 
+
+    Parameters
+    ----------
+    ds : xr.Dataset
+        dataset where all variables have the same time dimension
+    megabytes_per_chunk : Union[int, float], optional
+        Target chunk size in MB. Recall that chunking occurs per variable. By default 100
+
+    Returns
+    -------
+    xr.Dataset
+        [description]
+        
+    Raises
+    ------
+    ValueError
+        When an individual grid point is larger than the given megabytes_per_chunk
+    """
+    total_points = len(ds.lat) * len(ds.lon)
+    mb_per_point = ds.nbytes / total_points / 2 ** 20
+    if mb_per_point > megabytes_per_chunk:
+        raise ValueError(
+            f"Each grid point is larger than the given chunk size.\nPoint size: {mb_per_point:.2f}MB\n megabytes_per_chunk: {megabytes_per_chunk:.2f}\nThis algorithm hardcodes a full time slice."
+        )
+    points_per_chunk = (
+        megabytes_per_chunk / mb_per_point * (len(ds.variables) - len(ds.coords))
+    )  # chunks are per-variable. ds.variables includes coords, so they must be removed
+    if points_per_chunk < total_points:
+        # this binary tiling algorithm is conservative on number of chunks, so I made step size aggressive to compensate.
+        log_n_chunks = np.ceil(
+            np.log2(total_points / points_per_chunk)
+        )  # nearest power of 2, rounded up
+        log_lat_chunks = log_n_chunks // 2
+        log_lon_chunks = log_n_chunks - log_lat_chunks
+        lat_step = np.ceil(len(ds.lat) / (2 ** log_lat_chunks))
+        lon_step = np.ceil(len(ds.lon) / (2 ** log_lon_chunks))
+        return ds.chunk(chunks={"lat": lat_step, "lon": lon_step, "time": None})
+    else:
+        return ds.chunk(chunks={"lat": None, "lon": None, "time": None})
+
+
 def merra_nc4_to_parquet(
     files_in: Sequence[Path],
     dir_out: Path,
@@ -199,20 +243,8 @@ def merra_nc4_to_parquet(
         compat="no_conflicts",
     )
 
-    total_points = len(ds.lat) * len(ds.lon)
-    mb_per_point = ds.nbytes / total_points / 2 ** 20
-    points_per_chunk = max_megabytes_per_file / mb_per_point
-    if points_per_chunk < total_points:
-        # this binary tiling algorithm is pretty conservative on chunk size, but should be good enough
-        log_n_chunks = np.ceil(
-            np.log2(total_points / points_per_chunk)
-        )  # nearest power of 2, rounded up
-        log_lat_chunks = log_n_chunks // 2
-        log_lon_chunks = log_n_chunks - log_lat_chunks
-        lat_step = np.ceil(len(ds.lat) / (2 ** log_lat_chunks))
-        lon_step = np.ceil(len(ds.lon) / (2 ** log_lon_chunks))
-        ds = ds.chunk(chunks={"lat": lat_step, "lon": lon_step, "time": None})
-    ds = chunk_transformations(ds)
+    ds = rechunk(ds)
+    ds = transforms(ds)
     if precision_reduction is not None:
         fp16 = precision_reduction == "fp16"
         reduce_precision(ds, fp16=fp16)
