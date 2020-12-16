@@ -1,8 +1,10 @@
 import asyncio
 from datetime import datetime
+from pathlib import Path
+
 import merra_urls
 import async_downloader
-from pathlib import Path
+
 
 urls = merra_urls.url_generator(
     time_interval=(datetime(2014, 1, 1), datetime(2019, 1, 1)),

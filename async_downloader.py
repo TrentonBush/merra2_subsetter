@@ -3,17 +3,15 @@ import aiometer
 import aiofiles
 from pathlib import Path
 from collections import defaultdict
+from dotenv import load_dotenv
+import os
 
 from typing import (
     Union,
-    Callable,
     Iterable,
     Optional,
-    Tuple,
     DefaultDict,
     List,
-    Coroutine,
-    Any,
 )
 
 
@@ -25,25 +23,17 @@ class AsyncDownloader(object):
     def __init__(
         self,
         directory: Union[str, Path],
-        auth: Optional[Tuple[str, str]] = None,
-        merra: bool = True,
         max_at_once: int = 10,
         max_per_second: float = 3.0,
         timeout: float = 30.0,
         retries: int = 1,
     ) -> None:
-        """Class to download many files concurrently. Motivated by reanalysis data.
+        """Class to download many files concurrently. Hardcoded for MERRA-2 reanalysis data.
 
         Parameters
         ----------
         directory : Union[str, Path]
             Path to output directory. Will be created if needed.
-        filename_from_url : Optional[Callable[[str], str]], optional
-            function to extract a filename from a URL string. Set by config. By default None
-        auth : Optional[Tuple[str, str]], optional
-            Tuple of (username, password), set by config. By default None
-        merra : bool, optional
-            If true, loads merra config. Otherwise ERA-5 (not yet implemented). By default True
         max_at_once : int, optional
             Max concurrent connections set by aiometer, by default 10
         max_per_second : float, optional
@@ -56,7 +46,7 @@ class AsyncDownloader(object):
 
         Example
         -------
-        urls = (f'google.com/{i}' for i in range(100))
+        urls = (f'fake_MERRA_URL.com/{i}' for i in range(100))
         downloader = AsyncDownloader(Path('./data/), max_at_once=5)
         asyncio.run(downloader.download(urls))
         """
@@ -64,31 +54,19 @@ class AsyncDownloader(object):
         self.failed_downloads: DefaultDict[Union[int, str], List[str]] = defaultdict(
             list
         )
-
-        self._auth = auth
-        self._filename_from_url: Callable[[str], str] = merra2_file_from_url
         self._max_at_once = max_at_once
         self._max_per_second = max_per_second
         self._timeout = timeout
         self._retries = retries
 
         self._client: Optional[httpx.AsyncClient] = None
-        self._current_operation: Callable[
-            [httpx.Response], Coroutine[Any, Any, Any]
-        ] = self._write_async
-        if merra:
-            self._merra_config()
 
-    def _merra_config(self) -> None:
-        from dotenv import load_dotenv
-        import os
-
+        # merra config
         load_dotenv()
         self._auth = (os.getenv("MERRA2_USER"), os.getenv("MERRA2_PASS"))
-        self._filename_from_url = merra2_file_from_url
 
     def _get_filepath(self, url: str) -> Path:
-        return self.directory / self._filename_from_url(url)
+        return self.directory / merra2_file_from_url(url)
 
     async def _write_async(self, response: httpx.Response) -> None:
         filepath = self._get_filepath(response.url.path)
@@ -97,20 +75,12 @@ class AsyncDownloader(object):
                 if chunk:
                     await f.write(chunk)
 
-    async def _write(self, response: httpx.Response) -> None:
-        filepath = self._get_filepath(response.url.path)
-        with open(filepath, "wb") as fd:
-            async for chunk in response.aiter_bytes():
-                if chunk:
-                    fd.write(chunk)
-
     async def _download_url(self, url: str) -> None:
         try:
             async with self._client.stream("GET", url) as resp:
                 try:
                     resp.raise_for_status()
-                    # TODO: this only works if self._current_operation is AWAITABLE. Not if Callable
-                    await self._current_operation(resp)
+                    await self._write_async(resp)
                     return
                 except httpx.HTTPError:
                     print(f"Status: {resp.status_code}\nURL: {url}\n")
@@ -133,14 +103,13 @@ class AsyncDownloader(object):
 
     async def download(self, urls: Iterable[str]) -> None:
         self.directory.mkdir(parents=True, exist_ok=True)
-        self._current_operation = self._write_async
 
         # run first_url to completion before starting concurrent download
         # This ensures authentication and cookie gathering is done only once
         url_iterator = iter(urls)  # makes compatible with lists and generators
         first_url = next(url_iterator)
 
-        async with httpx.AsyncClient(auth=self._auth, timeout=self._timeout) as client:
+        async with httpx.AsyncClient(auth=self._auth, timeout=self._timeout) as client:  # type: ignore
             self._client = client
             await self._download_url(first_url)
             await aiometer.run_on_each(

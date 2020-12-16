@@ -10,10 +10,10 @@ def binary_round(
     binary_bits: Optional[int] = None,
     decimal_digits: Optional[int] = None,
 ) -> Union[xr.Dataset, xr.DataArray, np.ndarray]:
-    """Round an array of floats to a specific number of bits. The number of bits can be specified directly, with binary_bits, or calculated from decimal_digits. The decimal_digits conversion rounds with at least as much precision as the decimal_digits.
+    """Round an array of floats to a specific number of bits. The number of bits can be specified directly, with binary_bits, or calculated (conservatively) from decimal_digits.
     Note: input negative bits to round to the left of the floating point.
     Motivation is to enable higher compression by removing false precision from data.
-    
+
     Example: binary_round(np.array([1.1234567]), decimal_digits=2) -> np.ndarray(1.125)
 
     Parameters
@@ -53,7 +53,7 @@ def binary_round(
     multiplier = 2 ** bits
     divisor = 2 ** (
         -1 * bits
-    )  # faster multiply by reciprocal than to divide, according to some StackOverflow post. Probably doesn't matter much.
+    )  # faster to multiply by reciprocal than to divide, according to some StackOverflow post. Probably doesn't matter much.
     return (ds * multiplier).round() * divisor
 
 
@@ -123,7 +123,7 @@ def make_divisions(
     mb_per_partition: Optional[int] = None,
 ) -> list:
     """Calculate partition divisions for converting an xr.Dataset to a dask.DataFrame given either points per partition or megabytes per partition. Either option will produce partitions split on grid point boundaries, to ensure load order wont matter in the future.
-    
+
     Parameters
     ----------
     ds : xr.Dataset
@@ -168,8 +168,8 @@ def make_divisions(
 
 
 def rechunk(ds: xr.Dataset, megabytes_per_chunk: Union[int, float] = 100) -> xr.Dataset:
-    """Change chunk size to something more appropriate. Daily netCDFs are read in as all-space, daily time. I want the opposite: all-time chunked space. Spatial tiling is determined by megabytes_per_chunk.
-    Note that megabytes_per_chunk is approximate and usually conservative - the number of chunks is conservative but the step size is aggressive, so the errors often but not always offset. 
+    """Change chunk size to something more appropriate. Daily netCDFs are read in as all-space, daily time. I want the opposite: all-time, chunked space. Spatial tiling is determined by megabytes_per_chunk.
+    Note that megabytes_per_chunk is approximate and usually conservative - the number of chunks is conservative but the step size is aggressive, so the errors often but not always offset.
 
     Parameters
     ----------
@@ -182,7 +182,7 @@ def rechunk(ds: xr.Dataset, megabytes_per_chunk: Union[int, float] = 100) -> xr.
     -------
     xr.Dataset
         [description]
-        
+
     Raises
     ------
     ValueError
