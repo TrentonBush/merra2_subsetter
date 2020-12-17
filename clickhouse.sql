@@ -218,9 +218,3 @@ create table test.full32_dg_lz
 ) Engine = MergeTree()
 primary key (lat, lon)
 order by (lat, lon, time);
-
-
-
-#bash: for FILENAME in *.parquet; do cat $FILENAME | clickhouse-client --query="insert into test.round_d_lz format Parquet"; done
-
-clickhouse-client --query="select table, name, type, data_compressed_bytes compressed, data_uncompressed_bytes uncompressed, (compressed / uncompressed) ratio, compression_codec codec from system.columns where database like 'test' order by name format TSVWithNames" > /mnt/c/code/wind/merra2_subsetter/clickhouse_compression_test.tsv
